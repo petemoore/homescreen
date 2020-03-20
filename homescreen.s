@@ -689,10 +689,8 @@ poke_address:
   movk    x13, #0x97b4, lsl #48           // x13 = 0x97b425ed097b425f = 10931403895531586143
   umulh   x14, x13, x11                   // x14 = (10931403895531586143 * x11) / 18446744073709551616 = int(x11*16/27)
   lsr     x14, x14, #7                    // x14 = int(x11/216)
-  mov     x15, #0xcccd
-  movk    x15, #0xcccc, lsl #16
-  movk    x15, #0xcccc, lsl #32
-  movk    x15, #0xcccc, lsl #48           // x15 = 0xcccccccccccccccd = 14757395258967641293
+  mov     x15, #0xcccccccccccccccc
+  add     x15, x15, #1                    // x15 = 0x0xcccccccccccccccd
   umulh   x16, x15, x14                   // x16 = 14757395258967641293 * int(x11/216) / 2^64 = (4/5) * int(x11/216)
   lsr     x16, x16, #4                    // x16 = int(int(x11/216)/20)
   add     x16, x16, x16, lsl #2           // x16 = 5 * int(int(x11/216)/20)
