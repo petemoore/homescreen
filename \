@@ -17,6 +17,9 @@
 .set RAM_DISK_SIZE,    0x10000000
 .set HEAP_SIZE,        0x10000000
 
+.set GPU_START,        0x3c000000         // First byte of shared GPU memory. Note, if we support other RPI models later, we'll need to set this based on the model. This also assumes 64MB gpu.
+                                          // TODO: We should get this from https://github.com/raspberrypi/firmware/wiki/Mailbox-property-interface#get-arm-memory
+
 .set FIRST_UDG_CHAR,   'A'                // Character 'A'
 .set UDG_COUNT,        21                 // Number of User Defined Graphics to copy (=> 'A'-'U').
 
@@ -82,8 +85,7 @@ _start:
   str     x11, [x28, SFNEXT-sysvars]      // Store current journal entry in SFNEXT.
   str     x10, [x11, #0x40]               // Store RAM_DISK start location in first RAM Disk Catalogue journal entry.
   str     x9, [x28, SFSPACE-sysvars]      // Store free space in SFSPACE.
-  adr     x14, arm_size
-  ldr     w14, [x14]                      // x14 = first byte of shared GPU memory, for determining where CPU dedicated RAM ends (one byte below).
+  mov     x14, GPU_START                  // x14 = first byte of shared GPU memory, for determining where CPU dedicated RAM ends (one byte below).
   sub     x14, x14, 1                     // x14 = last byte of dedicated RAM (not shared with GPU).
   str     x14, [x28, P_RAMT-sysvars]      // [P_RAMT] = 0x3bffffff.
   mov     x15, UDG_COUNT * 4              // x15 = number of double words (8 bytes) of characters to copy to the user defined graphics region.
@@ -166,15 +168,9 @@ new:
   movl    w0, BORDER_COLOUR               // w0 = default border colour
   bl      paint_border
   bl      clear_screen
-  mov     w0, 0x01000000
+  mov     w0, 0x00800000
   bl      wait_cycles
   bl      display_zx_screen
-  mov     w0, 0x00800000
-  bl      wait_cycles
-  adr     x0, mbreq
-  bl      display_memory
-  mov     w0, 0x00800000
-  bl      wait_cycles
   adr     x0, sysvars
   bl      display_memory
 
@@ -874,18 +870,9 @@ display_memory:
   mov     w11, #0x2020                    // two spaces ('  ')
   strh    w11, [x1], #2                   // write '  ' to [screen_line]
   ldr     x0, [sp]                        // x0 = dump address
-  mov     x2, #32
-  bl      hex_x0                          // append to [screen_line] and update x1
-  mov     x14, #0x20                      // 32 values to print
-  ldr     x13, [sp]                       // x13 = dump address
-2:
-  ldrb    w0, [x13], #1                   // w0 = data at address, bump address x13
-  strb    w11, [x1], #1                   // write ' ' to [screen_line]
   mov     x2, #8
-  bl      hex_x0
-  subs    x14, x14, #1
-  b.ne    2b
-  strh    w11, [x1], #2                   // write '  ' to [screen_line]
+  bl      hex_x0                          // append to [screen_line] and update x1
+  
   strb    wzr, [x1], #1                   // append 0 byte to terminate string
   adr     x0, screen_line
   mov     w1, #0                          // x = 0
@@ -899,20 +886,20 @@ display_memory:
   stp     x0, x1, [sp, #-16]!             // store updated address / line number
   cmp     x1, #60                         // check if 60 lines written to screen
   b.ne    1b                              // if not, process next line
-  add     sp, sp, #0x10
+  // ldrb    w13, [x12], #1                  // w13 = data at address
   ldp     x29, x30, [sp], #0x10           // Pop frame pointer, procedure link register off stack.
   ret
 
 # On entry:
 #   x0 = hex value to convert to text
 #   x1 = address to write text to (no trailing 0)
-#   x2 = number of bits to print (multiple of 4)
+#   x2 = number of chars to print
 # On exit:
-#   x1 = address of next unused char (x1 += x2/4)
+#   x1 = address of next unused char (entry x1 + 8)
 hex_x0:
   stp     x29, x30, [sp, #-16]!           // Push frame pointer, procedure link register on stack.
   mov     x29, sp                         // Update frame pointer to new stack location.
-  ror     x0, x0, x2
+  mov     x4, #64
 1:
   ror     x0, x0, #60
   and     w3, w0, #0x0f
@@ -922,7 +909,7 @@ hex_x0:
   add     w3, w3, 0x27
 2:
   strb    w3, [x1], #1
-  subs    w2, w2, #4
+  subs    w2, w2, #1
   b.ne    1b
   ldp     x29, x30, [sp], #0x10           // Pop frame pointer, procedure link register off stack.
   ret

@@ -3,6 +3,8 @@
 msg_copyright:
   .asciz "1982, 1986, 1987 Amstrad Plc."
 
+msg_hex_header:
+  .asciz "           00 01 02 03 04 05 06 07 08 09 0a 0b 0c 0d 0e 0f 10 11 12 13 14 15 16 17 18 19 1a 1b 1c 1d 1e 1f  "
 
 .align 1
 # -------------------------
@@ -66,45 +68,53 @@ R1_162D:
 # Memory block for GPU mailbox call to allocate framebuffer
 .align 4
 mbreq:
-  .word 140                               // Buffer size
+  .word (mbreq_end-mbreq)                 // Buffer size
   .word 0                                 // Request/response code
-  .word 0x48003                           // Tag 0 - Set Screen Size
+  .word 0x00048003                        // Tag 0 - Set Screen Size
   .word 8                                 //   value buffer size
   .word 0                                 //   request: should be 0          response: 0x80000000 (success) / 0x80000001 (failure)
   .word SCREEN_WIDTH                      //   request: width                response: width
   .word SCREEN_HEIGHT                     //   request: height               response: height
-  .word 0x48004                           // Tag 1 - Set Virtual Screen Size
+  .word 0x00048004                        // Tag 1 - Set Virtual Screen Size
   .word 8                                 //   value buffer size
   .word 0                                 //   request: should be 0          response: 0x80000000 (success) / 0x80000001 (failure)
   .word SCREEN_WIDTH                      //   request: width                response: width
   .word SCREEN_HEIGHT                     //   request: height               response: height
-  .word 0x48009                           // Tag 2 - Set Virtual Offset
+  .word 0x00048009                        // Tag 2 - Set Virtual Offset
   .word 8                                 //   value buffer size
   .word 0                                 //   request: should be 0          response: 0x80000000 (success) / 0x80000001 (failure)
   .word 0                                 //   request: x offset             response: x offset
   .word 0                                 //   request: y offset             response: y offset
-  .word 0x48005                           // Tag 3 - Set Colour Depth
+  .word 0x00048005                        // Tag 3 - Set Colour Depth
   .word 4                                 //   value buffer size
   .word 0                                 //   request: should be 0          response: 0x80000000 (success) / 0x80000001 (failure)
                                           //                   32 bits per pixel => 8 red, 8 green, 8 blue, 8 alpha
                                           //                   See https://en.wikipedia.org/wiki/RGBA_color_space
   .word 32                                //   request: bits per pixel       response: bits per pixel
-  .word 0x48006                           // Tag 4 - Set Pixel Order (really is "Colour Order", not "Pixel Order")
+  .word 0x00048006                        // Tag 4 - Set Pixel Order (really is "Colour Order", not "Pixel Order")
   .word 4                                 //   value buffer size
   .word 0                                 //   request: should be 0          response: 0x80000000 (success) / 0x80000001 (failure)
   .word 0                                 //   request: 0 => BGR, 1 => RGB   response: 0 => BGR, 1 => RGB
-  .word 0x40001                           // Tag 5 - Get (Allocate) Buffer
+  .word 0x00040001                        // Tag 5 - Get (Allocate) Buffer
   .word 8                                 //   value buffer size (response > request, so use response size)
   .word 0                                 //   request: should be 0          response: 0x80000000 (success) / 0x80000001 (failure)
 framebuffer:
   .word 4096                              //   request: alignment in bytes   response: frame buffer base address
   .word 0                                 //   request: padding              response: frame buffer size in bytes
-  .word 0x40008                           // Tag 6 - Get Pitch (bytes per line)
+  .word 0x00040008                        // Tag 6 - Get Pitch (bytes per line)
   .word 4                                 //   value buffer size
   .word 0                                 //   request: should be 0          response: 0x80000000 (success) / 0x80000001 (failure)
 pitch:
   .word 0                                 //   request: padding              response: bytes per line
+  .word 0x00010005                        // Tag 7 - Get ARM memory
+  .word 8                                 //   value buffer size
+  .word 0                                 //   request: should be 0          response: 0x80000000 (success) / 0x80000001 (failure)
+arm_base:
+  .word 0                                 //   request: padding              response: base address in bytes
+arm_size:
+  .word 0                                 //   request: padding              response: size in bytes
   .word 0                                 // End Tags
+mbreq_end:
 
 .bss
 
@@ -145,6 +155,8 @@ sysvars:
   MASK_P:         .space 1                // Used for transparent colours, etc. Any bit that is 1 shows that the corresponding attribute.
   ERR_NR:         .space 1                // 1 less than the report code. Starts off at 255 (for -1).
   DF_SZ:          .space 1                // The number of lines (including one blank line) in the lower part of the screen. (1-60)
+
+  screen_line:    .space ((SCREEN_WIDTH-BORDER_LEFT-BORDER_RIGHT)/16)+1 // add 1 for trailing 0 byte
 
 .align 1
   BAUD:           .space 2                // Baud rate timing constant for RS232 socket. Default value of 11. [Name clash with ZX Interface 1 system variable at 0x5CC3]
