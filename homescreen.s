@@ -59,6 +59,14 @@ _start:
   str     x0, [sp, 8]
 2:
   adr     x28, sysvars                    // x28 will remain at this constant value to make all sys vars via an immediate offset.
+//   adrp    x0, __bss_start__
+//   add     x0, x0, #:lo12:__bss_start__    // x0 = __bss_start__
+//   adrp    x1, __bss_end__
+//   add     x1, x1, #:lo12:__bss_end__      // x1 = __bss_end__
+// 3:
+//   strb    wzr, [x0], #1
+//   cmp     x0, x1
+//   b.ne    3b
   bl      uart_init                       // Initialise UART interface.
 
 # Should enable interrupts, set up vector jump tables, switch execution
@@ -70,8 +78,7 @@ _start:
 # Init sound?
 
   bl      init_framebuffer                // Allocate a frame buffer with chosen screen settings.
-  movl    w0, PAPER_COLOUR                // w0 = default paper colour
-  bl      paint_window                    // Paint the main window (everything except border)
+  bl      clear_screen                    // Paint the main window (everything except border)
   bl      paint_copyright                 // Paint the copyright text ((C) 1982 Amstrad....)
 
 # from R0_0137:
@@ -171,11 +178,29 @@ new:
   bl      display_zx_screen
   mov     w0, 0x00800000
   bl      wait_cycles
-  adr     x0, mbreq
+  bl      clear_screen
+  mov     x0, 0x80000
+  sub     x0, x0, #64
+  mov     x1, #2
+  mov     x2, #0
   bl      display_memory
-  mov     w0, 0x00800000
-  bl      wait_cycles
+  adr     x0, mbreq
+  mov     x1, #5
+  mov     x2, #4
+  bl      display_memory
   adr     x0, sysvars
+  mov     x1, #10
+  mov     x2, #11
+  bl      display_memory
+  adrp    x0, heap
+  add     x0, x0, #:lo12:heap             // x0 = heap
+  sub     x0, x0, #0x60
+  mov     x1, #6
+  mov     x2, #23
+  bl      display_memory
+  ldr     x0, [x28, UDG-sysvars]
+  mov     x1, #11
+  mov     x2, #31
   bl      display_memory
 
 //   mov     w13, 0x0523                     // The values five and thirty five.
@@ -518,7 +543,7 @@ paint_rectangle:
   ret
 
 # On entry:
-#   w0 = colour to paint border
+#   w0 = colour to paint main screen
 paint_window:
   stp     x29, x30, [sp, #-16]!           // Push frame pointer, procedure link register on stack.
   mov     x29, sp                         // Update frame pointer to new stack location.
@@ -834,6 +859,8 @@ clear_screen:
   str     x1, [x0], #8
   cmp     x0, x2
   b.ne    2b
+  movl    w0, PAPER_COLOUR                // w0 = default paper colour
+  bl      paint_window
   ldp     x29, x30, [sp], #0x10           // Pop frame pointer, procedure link register off stack.
   ret
   
@@ -857,49 +884,54 @@ display_zx_screen:
   ldp     x29, x30, [sp], #0x10           // Pop frame pointer, procedure link register off stack.
   ret
 
+# On entry:
 #   x0 = start address
+#   x1 = number of rows to print
+#   x2 = screen line to start at
 display_memory:
   stp     x29, x30, [sp, #-16]!           // Push frame pointer, procedure link register on stack.
-  mov     x1, #1                          // line number
-  stp     x0, x1, [sp, #-16]!
+  stp     x19, x20, [sp, #-16]!           // Store old x19, x20 on the the stack.
+  stp     x21, x22, [sp, #-16]!           // Store old x21, x22 on the the stack.
+  stp     x23, x24, [sp, #-16]!           // Store old x23, x24 on the the stack.
   mov     x29, sp                         // Update frame pointer to new stack location.
+  mov     x19, x0                         // x19 = start address
+  mov     x20, x1                         // x20 = number of rows to print
+  mov     x21, x2                         // x21 = screen line to start at
+  mov     w23, #0x2020                    // two spaces ('  ')
   adr     x0, msg_hex_header              // Pointer to string
   mov     w1, #0                          // x coordinate
-  mov     x2, #0                          // y coordinate
   mov     w3, #0x00ffffff                 // white ink
   mov     w4, #0x000000cc                 // (dark) blue paper
   bl      paint_string                    // paint hex header line
+  add     x21, x21, #1                    // x21 = first data line screen line
 1:
   adr     x1, screen_line                 // address to write text string to
-  mov     w11, #0x2020                    // two spaces ('  ')
-  strh    w11, [x1], #2                   // write '  ' to [screen_line]
-  ldr     x0, [sp]                        // x0 = dump address
+  strh    w23, [x1], #2                   // write '  ' to [screen_line]
+  mov     x0, x19                         // x0 = dump address
   mov     x2, #32
   bl      hex_x0                          // append to [screen_line] and update x1
-  mov     x14, #0x20                      // 32 values to print
-  ldr     x13, [sp]                       // x13 = dump address
+  mov     x22, #0x20                      // 32 values to print
 2:
-  ldrb    w0, [x13], #1                   // w0 = data at address, bump address x13
-  strb    w11, [x1], #1                   // write ' ' to [screen_line]
+  strb    w23, [x1], #1                   // write ' ' to [screen_line]
+  ldrb    w0, [x19], #1                   // w0 = data at address, bump address x19
   mov     x2, #8
   bl      hex_x0
-  subs    x14, x14, #1
+  subs    x22, x22, #1
   b.ne    2b
-  strh    w11, [x1], #2                   // write '  ' to [screen_line]
+  strh    w23, [x1], #2                   // write '  ' to [screen_line]
   strb    wzr, [x1], #1                   // append 0 byte to terminate string
   adr     x0, screen_line
   mov     w1, #0                          // x = 0
-  ldr     x2, [sp, #8]                    // y = line number
+  mov     x2, x21                         // y = line number
   mov     w3, #0x00ffffff                 // white ink
   mov     w4, #0x000000cc                 // (dark) blue paper
   bl      paint_string                    // paint string
-  ldp     x0, x1, [sp], #0x10             // x0 = dump address, x1 = line number
-  add     x0, x0, #0x20                   // increase address by 0x20 bytes
-  add     x1, x1, #1                      // increase line number
-  stp     x0, x1, [sp, #-16]!             // store updated address / line number
-  cmp     x1, #60                         // check if 60 lines written to screen
+  add     x21, x21, #1                    // increase line number
+  subs    x20, x20, #1
   b.ne    1b                              // if not, process next line
-  add     sp, sp, #0x10
+  ldp     x23, x24, [sp], #0x10           // Restore old x23, x24.
+  ldp     x21, x22, [sp], #0x10           // Restore old x21, x22.
+  ldp     x19, x20, [sp], #0x10           // Restore old x19, x20.
   ldp     x29, x30, [sp], #0x10           // Pop frame pointer, procedure link register off stack.
   ret
 
