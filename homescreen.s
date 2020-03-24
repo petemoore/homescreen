@@ -59,14 +59,12 @@ _start:
   str     x0, [sp, 8]
 2:
   adr     x28, sysvars                    // x28 will remain at this constant value to make all sys vars via an immediate offset.
-//   adrp    x0, __bss_start__
-//   add     x0, x0, #:lo12:__bss_start__    // x0 = __bss_start__
-//   adrp    x1, __bss_end__
-//   add     x1, x1, #:lo12:__bss_end__      // x1 = __bss_end__
-// 3:
-//   strb    wzr, [x0], #1
-//   cmp     x0, x1
-//   b.ne    3b
+  mov     x0, x28
+  adr     x1, sysvars_end
+3:
+  strb    wzr, [x0], #1
+  cmp     x0, x1
+  b.ne    3b
   bl      uart_init                       // Initialise UART interface.
 
 # Should enable interrupts, set up vector jump tables, switch execution
@@ -172,7 +170,6 @@ new:
 
   movl    w0, BORDER_COLOUR               // w0 = default border colour
   bl      paint_border
-  bl      clear_screen
   mov     w0, 0x01000000
   bl      wait_cycles
   bl      display_zx_screen

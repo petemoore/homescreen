@@ -201,6 +201,8 @@ sysvars:
   UDG:            .space 8                // Address of first user-defined graphic. Can be changed to save space by having fewer.
   ERR_SP:         .space 8                // Address of item on machine stack to be used as error return.
 
+sysvars_end:
+
 # Memory regions
   display_file:   .space (SCREEN_HEIGHT-BORDER_TOP-BORDER_BOTTOM)*(SCREEN_WIDTH-BORDER_LEFT-BORDER_RIGHT)/8
                                           // One pixel per bit => 8 pixels per byte
