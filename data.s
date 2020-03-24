@@ -156,8 +156,6 @@ sysvars:
   ERR_NR:         .space 1                // 1 less than the report code. Starts off at 255 (for -1).
   DF_SZ:          .space 1                // The number of lines (including one blank line) in the lower part of the screen. (1-60)
 
-  screen_line:    .space ((SCREEN_WIDTH-BORDER_LEFT-BORDER_RIGHT)/16)+1 // add 1 for trailing 0 byte
-
 .align 1
   BAUD:           .space 2                // Baud rate timing constant for RS232 socket. Default value of 11. [Name clash with ZX Interface 1 system variable at 0x5CC3]
   SERFL:          .space 2                // Byte 0: Second character received flag:

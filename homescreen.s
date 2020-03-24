@@ -77,7 +77,6 @@ _start:
 
   bl      init_framebuffer                // Allocate a frame buffer with chosen screen settings.
   bl      clear_screen                    // Paint the main window (everything except border)
-  bl      paint_copyright                 // Paint the copyright text ((C) 1982 Amstrad....)
 
 # from R0_0137:
   mov     x9, RAM_DISK_SIZE               // x9 = size of ramdisk.
@@ -170,6 +169,7 @@ new:
 
   movl    w0, BORDER_COLOUR               // w0 = default border colour
   bl      paint_border
+  bl      paint_copyright                 // Paint the copyright text ((C) 1982 Amstrad....)
   mov     w0, 0x01000000
   bl      wait_cycles
   bl      display_zx_screen
@@ -569,7 +569,7 @@ paint_string:
   adr     x9, mbreq                       // x9 = address of mailbox request.
   ldr     w10, [x9, framebuffer-mbreq]    // w10 = address of framebuffer
   ldr     w9, [x9, pitch-mbreq]           // w9 = pitch
-  adr     x11, chars-32*32                // x11 = theoretical start of character table for char 0
+  ldr     x11, [x28, CHARS-sysvars]       // x11 = theoretical start of character table for char 0
 1:
   ldrb    w12, [x0], 1                    // w12 = char from string, and update x0 to next char
   cbz     w12, 2f                         // if found end marker, jump to end of function and return
@@ -890,6 +890,7 @@ display_memory:
   stp     x19, x20, [sp, #-16]!           // Store old x19, x20 on the the stack.
   stp     x21, x22, [sp, #-16]!           // Store old x21, x22 on the the stack.
   stp     x23, x24, [sp, #-16]!           // Store old x23, x24 on the the stack.
+  sub     sp, sp, #112                    // 112 bytes for screen line buffer
   mov     x29, sp                         // Update frame pointer to new stack location.
   mov     x19, x0                         // x19 = start address
   mov     x20, x1                         // x20 = number of rows to print
@@ -902,22 +903,22 @@ display_memory:
   bl      paint_string                    // paint hex header line
   add     x21, x21, #1                    // x21 = first data line screen line
 1:
-  adr     x1, screen_line                 // address to write text string to
-  strh    w23, [x1], #2                   // write '  ' to [screen_line]
+  mov     x1, sp                          // address to write text string to
+  strh    w23, [x1], #2                   // write '  ' to screen line buffer on stack
   mov     x0, x19                         // x0 = dump address
   mov     x2, #32
-  bl      hex_x0                          // append to [screen_line] and update x1
+  bl      hex_x0                          // append to screen line buffer and update x1
   mov     x22, #0x20                      // 32 values to print
 2:
-  strb    w23, [x1], #1                   // write ' ' to [screen_line]
+  strb    w23, [x1], #1                   // write ' ' to screen line buffer
   ldrb    w0, [x19], #1                   // w0 = data at address, bump address x19
   mov     x2, #8
   bl      hex_x0
   subs    x22, x22, #1
   b.ne    2b
-  strh    w23, [x1], #2                   // write '  ' to [screen_line]
+  strh    w23, [x1], #2                   // write '  ' to screen line buffer
   strb    wzr, [x1], #1                   // append 0 byte to terminate string
-  adr     x0, screen_line
+  mov     x0, sp
   mov     w1, #0                          // x = 0
   mov     x2, x21                         // y = line number
   mov     w3, #0x00ffffff                 // white ink
@@ -926,6 +927,7 @@ display_memory:
   add     x21, x21, #1                    // increase line number
   subs    x20, x20, #1
   b.ne    1b                              // if not, process next line
+  add     sp, sp, #112                    // Free screen line buffer
   ldp     x23, x24, [sp], #0x10           // Restore old x23, x24.
   ldp     x21, x22, [sp], #0x10           // Restore old x21, x22.
   ldp     x19, x20, [sp], #0x10           // Restore old x19, x20.
