@@ -196,7 +196,7 @@ new:
   mov     x2, #23
   bl      display_memory
   ldr     x0, [x28, UDG-sysvars]
-  mov     x1, #21
+  mov     x1, UDG_COUNT
   mov     x2, #31
   bl      display_memory
 
