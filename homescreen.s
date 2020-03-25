@@ -53,7 +53,7 @@ _start:
   str     x0, [sp, 8]
   b       2f
 1:
-  cmp     x19, 2
+  cmp     x0, 2
   b.ne    2f
   mrs     x0, sctlr_el2
   str     x0, [sp, 8]
