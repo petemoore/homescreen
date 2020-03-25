@@ -55,8 +55,36 @@ _start:
 1:
   cmp     x0, 2
   b.ne    2f
-  mrs     x0, sctlr_el2
-  str     x0, [sp, 8]
+  mrs     x0, sctlr_el2                   // 0000000030c50830
+  str     x0, [sp, 8]                     // 0000 0000 0000 0000 0000 0000 0000 0000
+                                          // 0011 0000 1100 0101 0000 1000 0011 0000
+                                          //
+                                          // RES0: 0b00000000000000000000000000000000
+                                          // EnIA: 0b0 => RES0 in v8.0 (pointer auth)
+                                          // EnIB: 0b0 => RES0 in v8.0 (pointer auth)
+                                          // RES1: 0b11
+                                          // EnDA: 0b0 => RES0 in v8.0 (pointer auth)
+                                          // RES0: 0b0
+                                          // EE: 0b0 => little endian translation table walks
+                                          // RES0: 0b0
+                                          // RES1: 0b11
+                                          // IESB: 0b0 => RES0 in v8.0 (error sync event / debug)
+                                          // RES0: 0b0
+                                          // WXN: 0b0 => UNKNOWN since PE resets to EL2 (write execute never)
+                                          // RES1: 0b1
+                                          // RES0: 0b0
+                                          // RES1: 0b1
+                                          // RES0: 0b00
+                                          // EnDB: 0b0 => RES0 in v8.0 (pointer auth)
+                                          // I: 0b0 => Instruction cache disabled
+                                          // RES1: 0b1
+                                          // RES0: 0b0000
+                                          // nAA: 0b0 => RES0 in v8.0
+                                          // RES1: 0b11
+                                          // SA: 0b0 => UNKNOWN since PE resets to EL2 (SP alignment checking)
+                                          // C: 0b0 => data cache disabled
+                                          // A: 0b0 => UNKNOWN since PE resets to EL2 (alignment checking)
+                                          // M: 0b0 => EL2 stage 1 address translation disabled
 2:
   adr     x28, sysvars                    // x28 will remain at this constant value to make all sys vars via an immediate offset.
   mov     x0, x28
