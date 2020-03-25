@@ -120,7 +120,7 @@ new:
   str     x0, [x28, CHARS-sysvars]        // [CHARS] = theoretical address of char zero.
   ldr     x1, [x28, RAMTOP-sysvars]       // x1 = [RAMTOP].
   add     x1, x1, 1                       // x1 = [RAMTOP] + 1.
-  and     sp, x1, 0xfffffff0              // sp = highest 16-byte aligned address equal to or lower than ([RAMTOP] + 1).
+//  and     sp, x1, 0xfffffff0              // sp = highest 16-byte aligned address equal to or lower than ([RAMTOP] + 1).
   ldrb    w1, [x28, FLAGS-sysvars]        // w1 = [FLAGS].
   orr     w1, w1, #0x10                   // w1 = [FLAGS] with bit 4 set.
                                           // [This bit is unused by 48K BASIC].
@@ -176,8 +176,7 @@ new:
   mov     w0, 0x00800000
   bl      wait_cycles
   bl      clear_screen
-  mov     x0, 0x80000
-  sub     x0, x0, #64
+  mov     x0, sp
   mov     x1, #2
   mov     x2, #0
   bl      display_memory
@@ -378,7 +377,7 @@ chan_open:
   ldrh    w10, [x9, STRMS-sysvars+6]      // w10 = [stream number * 2 + STRMS + 6] = CHANS offset + 1
   cbnz    w10, 1f                         // Non-zero indicates channel open, in which case continue
   mov     x0, 0x17                        // Error Report: Invalid stream
-  bl      error_1
+//   bl      error_1
   b       2f
 1:
   add     x10, x10, CHANS-sysvars-1       // w10 = CHANS offset + 1 + CHANS - sysvars - 1 = address in CHANS - sysvars
@@ -569,7 +568,8 @@ paint_string:
   adr     x9, mbreq                       // x9 = address of mailbox request.
   ldr     w10, [x9, framebuffer-mbreq]    // w10 = address of framebuffer
   ldr     w9, [x9, pitch-mbreq]           // w9 = pitch
-  ldr     x11, [x28, CHARS-sysvars]       // x11 = theoretical start of character table for char 0
+  adr     x11, chars-32*32                // x11 = theoretical start of character table for char 0
+//   ldr     x11, [x28, CHARS-sysvars]       // x11 = theoretical start of character table for char 0
 1:
   ldrb    w12, [x0], 1                    // w12 = char from string, and update x0 to next char
   cbz     w12, 2f                         // if found end marker, jump to end of function and return
