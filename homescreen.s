@@ -205,26 +205,26 @@ new:
   bl      wait_cycles
   bl      clear_screen
   mov     x0, sp
-  mov     x1, #2
+  mov     x1, #1
   mov     x2, #0
   bl      display_memory
   adr     x0, mbreq
   mov     x1, #5
-  mov     x2, #4
+  mov     x2, #3
   bl      display_memory
   adr     x0, sysvars
   mov     x1, #10
-  mov     x2, #11
+  mov     x2, #10
   bl      display_memory
   adrp    x0, heap
   add     x0, x0, #:lo12:heap             // x0 = heap
   sub     x0, x0, #0x60
   mov     x1, #6
-  mov     x2, #23
+  mov     x2, #22
   bl      display_memory
   ldr     x0, [x28, UDG-sysvars]
   mov     x1, UDG_COUNT
-  mov     x2, #31
+  mov     x2, #30
   bl      display_memory
 
 //   mov     w13, 0x0523                     // The values five and thirty five.
@@ -592,7 +592,15 @@ paint_window:
 #   w4 = paper colour
 paint_string:
   stp     x29, x30, [sp, #-16]!           // Push frame pointer, procedure link register on stack.
+  stp     x0, x1, [sp, #-16]!
+  stp     x2, x3, [sp, #-16]!
+  str     x4, [sp, #-16]!
   mov     x29, sp                         // Update frame pointer to new stack location.
+  bl      uart_puts
+  bl      uart_newline
+  ldr     x4, [sp], #0x10
+  ldp     x2, x3, [sp], #0x10
+  ldp     x0, x1, [sp], #0x10
   adr     x9, mbreq                       // x9 = address of mailbox request.
   ldr     w10, [x9, framebuffer-mbreq]    // w10 = address of framebuffer
   ldr     w9, [x9, pitch-mbreq]           // w9 = pitch
@@ -637,6 +645,16 @@ paint_copyright:
   movl    w3, INK_COLOUR                  // Ink colour is default system ink colour.
   movl    w4, PAPER_COLOUR                // Paper colour is default system paper colour.
   bl      paint_string                    // Paint the copyright string to screen.
+  ldp     x29, x30, [sp], #0x10           // Pop frame pointer, procedure link register off stack.
+  ret
+
+uart_newline:
+  stp     x29, x30, [sp, #-16]!           // Push frame pointer, procedure link register on stack.
+  mov     x29, sp                         // Update frame pointer to new stack location.
+  mov     x0, #13
+  bl      uart_send
+  mov     x0, #10
+  bl      uart_send
   ldp     x29, x30, [sp], #0x10           // Pop frame pointer, procedure link register off stack.
   ret
 
