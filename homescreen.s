@@ -198,10 +198,10 @@ new:
   movl    w0, BORDER_COLOUR               // w0 = default border colour
   bl      paint_border
   bl      paint_copyright                 // Paint the copyright text ((C) 1982 Amstrad....)
-  mov     w0, 0x01000000
+  mov     w0, 0x02000000
   bl      wait_cycles
   bl      display_zx_screen
-  mov     w0, 0x00800000
+  mov     w0, 0x01000000
   bl      wait_cycles
   bl      clear_screen
   mov     x0, sp
@@ -917,7 +917,7 @@ display_zx_screen:
   ldrb    w1, [x9], #1
   stp     x0, x9, [sp, #-16]!
   bl      poke_address
-  // mov     x0, 0x100
+  // mov     x0, 0x200
   // bl      wait_cycles
   ldp     x0, x9, [sp], #16
   add     x0, x0, #1
