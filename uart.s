@@ -65,45 +65,45 @@ wait_cycles:
   ret                                     // Return.
 
 # ------------------------------------------------------------------------------
-# 
+# Send a byte over Mini UART
 # ------------------------------------------------------------------------------
 uart_send:
-	mov	x2, 20564
-	movk	x2, 0x3f21, lsl 16
+  mov     x2, #0x5054
+  movk    x2, #0x3f21, lsl 16
 .L8:
-	ldr	w1, [x2]
-	tbz	x1, 5, .L8
-	mov	x1, 20544
-	movk	x1, 0x3f21, lsl 16
-	str	w0, [x1]
-	ret
+  ldr     w1, [x2]
+  tbz     x1, #5, .L8
+  mov     x1, #0x5040
+  movk    x1, #0x3f21, lsl 16
+  str     w0, [x1]
+  ret
 
 # ------------------------------------------------------------------------------
-# 
+# Send a null terminated string over Mini UART, replacing all \n with \r\n.
 # ------------------------------------------------------------------------------
 uart_puts:
-	ldrb	w1, [x0]
-	cbz	w1, .L16
-	mov	x2, 20564
-	movk	x2, 0x3f21, lsl 16
-	mov	x4, 20544
-	movk	x4, 0x3f21, lsl 16
-	mov	w5, 13
+  ldrb    w1, [x0]
+  cbz     w1, .L16
+  mov     x2, #0x5054
+  movk    x2, #0x3f21, lsl 16
+  mov     x4, #0x5040
+  movk    x4, #0x3f21, lsl 16
+  mov     w5, #13
 .L21:
-	cmp	w1, 10
-	beq	.L19
+  cmp     w1, #10
+  beq     .L19
 .L18:
-	ldrb	w3, [x0], 1
+  ldrb    w3, [x0], #1
 .L20:
-	ldr	w1, [x2]
-	tbz	x1, 5, .L20
-	str	w3, [x4]
-	ldrb	w1, [x0]
-	cbnz	w1, .L21
+  ldr     w1, [x2]
+  tbz     x1, #5, .L20
+  str     w3, [x4]
+  ldrb    w1, [x0]
+  cbnz    w1, .L21
 .L16:
-	ret
+  ret
 .L19:
-	ldr	w1, [x2]
-	tbz	x1, 5, .L19
-	str	w5, [x4]
-	b	.L18
+  ldr     w1, [x2]
+  tbz     x1, #5, .L19
+  str     w5, [x4]
+  b       .L18
