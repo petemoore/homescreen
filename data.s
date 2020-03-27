@@ -1,4 +1,4 @@
-.text
+.data
 
 msg_copyright:
   .asciz "1982, 1986, 1987 Amstrad Plc."

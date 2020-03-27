@@ -732,7 +732,7 @@ poke_address:
   b.hs    1f                              // if so, jump ahead since after display file
 
   // framebuffer addresses = pitch*(BORDER_TOP + 16*((x11/216)%20) + (x11/(216*20))%16 + 320*(x11/(216*20*16))) + address of framebuffer + 4 * (BORDER_LEFT + 8*(x11%216) + [0-7])
-  // attribute address = attribute_file+((x11/2)%108)+108*(((x11/216)%20)+20*(x11/(216*20*16)))
+  // attribute address = attributes_file+((x11/2)%108)+108*(((x11/216)%20)+20*(x11/(216*20*16)))
 
   adr     x9, mbreq                       // x9 = address of mailbox request.
   ldr     w10, [x9, framebuffer-mbreq]    // w10 = address of framebuffer

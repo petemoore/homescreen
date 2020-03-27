@@ -1,4 +1,4 @@
-.text
+.data
 .align 3
 
 ZX_SCREEN:
