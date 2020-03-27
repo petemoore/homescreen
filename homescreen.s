@@ -638,16 +638,6 @@ paint_copyright:
   ldp     x29, x30, [sp], #0x10           // Pop frame pointer, procedure link register off stack.
   ret
 
-uart_newline:
-  stp     x29, x30, [sp, #-16]!           // Push frame pointer, procedure link register on stack.
-  mov     x29, sp                         // Update frame pointer to new stack location.
-  mov     x0, #13
-  bl      uart_send
-  mov     x0, #10
-  bl      uart_send
-  ldp     x29, x30, [sp], #0x10           // Pop frame pointer, procedure link register off stack.
-  ret
-
 R1_09F4:
   stp     x29, x30, [sp, #-16]!           // Push frame pointer, procedure link register on stack.
   mov     x29, sp                         // Update frame pointer to new stack location.
@@ -990,6 +980,15 @@ hex_x0:
   subs    w2, w2, #4
   b.ne    1b
   ret
+
+
+# ------------------------------------------------------------------------------
+# Wait (at least) x0 instruction cycles.
+# ------------------------------------------------------------------------------
+wait_cycles:
+  subs    x0, x0, #0x1                    // x0 -= 1
+  b.ne    wait_cycles                     // Repeat until x0 == 0.
+  ret                                     // Return.
 
 .include "data.s"
 .include "font.s"

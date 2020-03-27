@@ -1,7 +1,7 @@
 .global uart_init
 .global uart_send
+.global uart_newline
 .global uart_puts
-.global wait_cycles
 
 
 # ------------------------------------------------------------------------------
@@ -41,8 +41,6 @@
 # Note, this is Broadcomm's own UART, not the ARM licenced UART interface.
 # ------------------------------------------------------------------------------
 uart_init:
-  stp     x29, x30, [sp, #-16]!           // Push frame pointer, procedure link register on stack.
-  mov     x29, sp                         // Update frame pointer to new stack location.
   mov     x1, AUX_BASE & 0xffff0000
   movk    x1, AUX_BASE & 0x0000ffff       // x1 = 0x3f215000 = AUX_BASE
   ldr     w2, [x1, AUX_ENABLES]           // w2 = [0x3f215004] = [AUX_ENABLES] (Auxiliary enables)
@@ -68,24 +66,18 @@ uart_init:
   orr     w2, w2, #0x00010000             // Set bit 16 (FSEL15 => GPIO Pin 15 takes alternative function 5).
   str     w2, [x4, GPFSEL1]               //   [GPFSEL1] = updated value => Enable UART 1.
   str     wzr, [x4, GPPUD]                //   [GPPUD] = 0x00000000 => GPIO Pull up/down = OFF
-  mov     x0, #0x96                       // x0 = 150
-  bl      wait_cycles                     // Wait 150 instruction cycles (as stipulated by datasheet).
+  mov     x5, #0x96                       // Wait 150 instruction cycles (as stipulated by datasheet).
+1:
+  subs    x5, x5, #0x1                    // x0 -= 1
+  b.ne    1b                              // Repeat until x0 == 0.
   mov     w2, #0xc000                     // w2 = 2^14 + 2^15
   str     w2, [x4, GPPUDCLK0]             //   [GPPUDCLK0] = 0x0000c000 => Control signal to lines 14, 15.
-  mov     x0, #0x96                       // x0 = 150
-  bl      wait_cycles                     // Wait 150 instruction cycles (as stipulated by datasheet).
+  mov     x0, #0x96                       // Wait 150 instruction cycles (as stipulated by datasheet).
+2:
+  subs    x0, x0, #0x1                    // x0 -= 1
+  b.ne    2b                              // Repeat until x0 == 0.
   str     wzr, [x4, GPPUDCLK0]            //   [GPPUDCLK0] = 0x00000000 => Remove control signal to lines 14, 15.
   str     w3, [x1, AUX_MU_CNTL]           //   [AUX_MU_CNTL_REG] = 0x00000003 => Enable Mini UART Tx/Rx
-  ldp     x29, x30, [sp], #16             // Restore frame pointer, link register.
-  ret                                     // Return.
-
-
-# ------------------------------------------------------------------------------
-# Wait (at least) x0 instruction cycles.
-# ------------------------------------------------------------------------------
-wait_cycles:
-  subs    x0, x0, #0x1                    // x0 -= 1
-  b.ne    wait_cycles                     // Repeat until x0 == 0.
   ret                                     // Return.
 
 
@@ -99,6 +91,20 @@ uart_send:
   ldr     w2, [x1, AUX_MU_LSR]            // w2 = [AUX_MU_LSR_REG]
   tbz     x2, #5, 1b                      // Repeat last statement until bit 5 is set.
   strb    w0, [x1, AUX_MU_IO_REG]         //   [AUX_MU_IO_REG] = w0
+  ret
+
+
+# ------------------------------------------------------------------------------
+# Send '\r\n' over Mini UART
+# ------------------------------------------------------------------------------
+uart_newline:
+  stp     x29, x30, [sp, #-16]!           // Push frame pointer, procedure link register on stack.
+  mov     x29, sp                         // Update frame pointer to new stack location.
+  mov     x0, #13
+  bl      uart_send
+  mov     x0, #10
+  bl      uart_send
+  ldp     x29, x30, [sp], #0x10           // Pop frame pointer, procedure link register off stack.
   ret
 
 
