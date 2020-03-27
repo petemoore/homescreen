@@ -350,8 +350,7 @@ cl_line:
   adr     x9, attributes_file_end         // x9 = first byte after end of attributes file.
   sub     x10, x9, x15, lsl #2            // x10 = start address in attributes file to clear
   ldrb    w9, [x29, TV_FLAG-sysvars]      // w9[0-7] = [TV_FLAG]
-  tst     w9, #1                          // Test bit 0; lower screen in use?
-  b.eq    4f
+  tbz     w9, #0, 4f                      // If bit 0 is clear, lower screen is in use; jump ahead to 4:.
   ldrb    w11, [x29, BORDCR-sysvars]
   b       5f
 4:
@@ -463,8 +462,6 @@ chan_flag:
 #   x1 = address of 64 bit key if found, otherwise 0
 #   x2 = 64 bit value for key if found, otherwise undefined value
 indexer:
-  stp     x29, x30, [sp, #-16]!           // Push frame pointer, procedure link register on stack.
-  mov     x29, sp                         // Update frame pointer to new stack location.
   ldr     x9, [x1], #-8                   // x9 = number of records. Set x1 to lookup table address - 8 = address of first record - 16.
 1:
   cbz     x9, 2b                          // If all records have been exhausted, jump forward to 2:.
@@ -477,13 +474,10 @@ indexer:
 2:
   mov     x1, 0                           // Set x1 to zero to indicate value wasn't found.
 3:
-  ldp     x29, x30, [sp], #16             // Pop frame pointer, procedure link register off stack.
   ret
 
 
 init_framebuffer:
-  stp     x29, x30, [sp, #-16]!           // Push frame pointer, procedure link register on stack.
-  mov     x29, sp                         // Update frame pointer to new stack location.
   movl     w9, MAILBOX_BASE               // x9 = 0x3f00b880 (Mailbox Peripheral Address)
   1:                                      // Wait for mailbox FULL flag to be clear.
     ldr     w10, [x9, MAILBOX_STATUS]     // w10 = mailbox status.
@@ -501,7 +495,6 @@ init_framebuffer:
   ldr     w11, [x10, framebuffer-mbreq]   // w11 = allocated framebuffer address
   and     w11, w11, #0x3fffffff           // Clear upper bits beyond addressable memory
   str     w11, [x10, framebuffer-mbreq]   // Store framebuffer address in framebuffer system variable.
-  ldp     x29, x30, [sp], #16             // Pop frame pointer, procedure link register off stack.
   ret
 
 # On entry:
@@ -546,8 +539,6 @@ paint_border:
 #   w3 = height (pixels)
 #   w4 = colour
 paint_rectangle:
-  stp     x29, x30, [sp, #-16]!           // Push frame pointer, procedure link register on stack.
-  mov     x29, sp                         // Update frame pointer to new stack location.
   adr     x9, mbreq                       // x9 = address of mailbox request.
   ldr     w10, [x9, framebuffer-mbreq]    // w10 = address of framebuffer
   ldr     w11, [x9, pitch-mbreq]          // w11 = pitch
@@ -563,7 +554,6 @@ paint_rectangle:
     add     w10, w12, w11                 // x10 = start of current line + pitch = start of new line.
     subs    w3, w3, 1                     // Decrease vertical pixel counter.
     b.ne    fill_rectangle                // Repeat until all framebuffer lines complete.
-  ldp     x29, x30, [sp], #0x10           // Pop frame pointer, procedure link register off stack.
   ret
 
 # On entry:
@@ -987,8 +977,6 @@ display_memory:
 # On exit:
 #   x1 = address of next unused char (x1 += x2/4)
 hex_x0:
-  stp     x29, x30, [sp, #-16]!           // Push frame pointer, procedure link register on stack.
-  mov     x29, sp                         // Update frame pointer to new stack location.
   ror     x0, x0, x2
 1:
   ror     x0, x0, #60
@@ -1001,7 +989,6 @@ hex_x0:
   strb    w3, [x1], #1
   subs    w2, w2, #4
   b.ne    1b
-  ldp     x29, x30, [sp], #0x10           // Pop frame pointer, procedure link register off stack.
   ret
 
 .include "data.s"
