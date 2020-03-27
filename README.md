@@ -1,3 +1,3 @@
 # homescreen
 
-Playing around with bare metal assembly on RPi 3B.
+This project has been moved to https://github.com/spectrum4/spectrum4.
